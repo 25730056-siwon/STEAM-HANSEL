@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STEAM-HANSEL : 언로깅 생존자</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&display=swap');
+
+        :root {
+            --metal-dark: #0a0807;
+            --metal-panel: rgba(26, 22, 20, 0.85);
+            --bronze: #b8860b;
+            --bronze-glow: rgba(184, 134, 11, 0.4);
+            --steampunk-teal: #2b4e6d; 
+            --neon-red: #ff3333; 
+            --neon-orange: #ffaa00; 
+            --text-main: #d4c5b9;
+            --text-dim: #88705b;
+            --text-narrative: #f0eadd;
+            --border-white: rgba(255, 255, 255, 0.2);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body, html {
+            width: 100%; height: 100%;
+            background-color: var(--metal-dark);
+            color: var(--text-main);
+            font-family: 'Nanum Myeongjo', serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- 표지 레이아웃 (Cover Page) --- */
+        #cover-page {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: var(--metal-dark);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            transition: opacity 1s ease, visibility 1s;
+        }
+
+        .student-info {
+            font-family: monospace; font-size: 1.1em; color: var(--text-dim);
+            letter-spacing: 4px; margin-bottom: 20px;
+        }
+
+        .main-title-large {
+            font-size: 4.5em; font-weight: 800; color: var(--bronze);
+            text-shadow: 0 0 20px var(--bronze-glow), 4px 4px 0px #000;
+            letter-spacing: -2px; text-align: center; line-height: 1.1;
+            margin-bottom: 40px; animation: glow-pulse 3s infinite;
+        }
+
+        @keyframes glow-pulse {
+            0%, 100% { text-shadow: 0 0 20px var(--bronze-glow); }
+            50% { text-shadow: 0 0 40px var(--bronze); }
+        }
+
+        .cover-variables {
+            display: flex; gap: 40px; margin-bottom: 60px;
+            background: rgba(255,255,255,0.02); padding: 20px 40px;
+            border: 1px solid var(--border-white);
+        }
+
+        .var-preview { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .var-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .var-name { font-size: 0.8em; color: var(--text-dim); font-family: monospace; }
+        .var-preview.bs .var-dot { background: var(--steampunk-teal); box-shadow: 0 0 10px var(--steampunk-teal); }
+        .var-preview.gc .var-dot { background: var(--neon-red); box-shadow: 0 0 10px var(--neon-red); }
+        .var-preview.ts .var-dot { background: var(--neon-orange); box-shadow: 0 0 10px var(--neon-orange); }
+
+        .connect-btn {
+            background: transparent; border: 1px solid var(--bronze); color: var(--bronze);
+            padding: 15px 50px; font-size: 1.3em; font-weight: bold; cursor: pointer;
+            transition: all 0.3s; letter-spacing: 5px; position: relative; overflow: hidden;
+        }
+
+        .connect-btn:hover {
+            background: var(--bronze); color: black; box-shadow: 0 0 30px var(--bronze-glow);
+            animation: glitch-anim 0.2s infinite;
+        }
+
+        /* --- 게임 메인 레이아웃 --- */
+        header {
+            height: 60px; background: var(--metal-dark); border-bottom: 1px solid var(--border-white);
+            display: none; justify-content: space-between; align-items: center; padding: 0 40px; z-index: 100;
+        }
+
+        .header-title { font-weight: 800; font-size: 1.1em; color: var(--bronze); letter-spacing: 1px; }
+
+        .status-gauges { display: flex; gap: 30px; }
+        .gauge-item { display: flex; align-items: center; gap: 10px; font-family: monospace; font-size: 0.85em; }
+        .gauge-bar { width: 80px; height: 3px; background: rgba(255,255,255,0.1); }
+        .gauge-fill { height: 100%; transition: width 0.5s ease; }
+        #bs-fill { background: var(--steampunk-teal); box-shadow: 0 0 10px var(--steampunk-teal); }
+        #gc-fill { background: var(--neon-red); box-shadow: 0 0 10px var(--neon-red); }
+        #ts-fill { background: var(--neon-orange); box-shadow: 0 0 10px var(--neon-orange); }
+
+        /* --- 중앙 스테이지 --- */
+        #visual-stage {
+            overflow:hidden;
+            flex: 1.5; position: relative; background-size: cover; background-position: center;
+            background-color: #050505; transition: background-image 0.8s ease; display: none;
+        }
+
+        #visual-stage::before {
+            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, transparent 20%, var(--metal-dark) 100%); z-index: 1;
+        }
+
+        .smoke-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.005" numOctaves="5" stitchTiles="stitch"/></filter><rect width="200" height="200" filter="url(%23n)"/></svg>');
+            opacity: 0.15; pointer-events: none; z-index: 2; animation: smoke-pulse 10s infinite alternate;
+        }
+
+        @keyframes smoke-pulse { from { transform: scale(1); opacity: 0.1; } to { transform: scale(1.1); opacity: 0.2; } }
+
+        /* --- 하단 푸터 --- */
+        footer {
+            height: 380px; background: var(--metal-panel); backdrop-filter: blur(15px);
+            border-top: 1px solid var(--border-white); padding: 20px 40px;
+            display: none; flex-direction: column; gap: 15px; z-index: 100;
+        }
+
+        .info-section { display: flex; flex-direction: column; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px; }
+        .phase-id { font-size: 0.75em; color: var(--steampunk-teal); font-family: monospace; }
+        .scene-main-title { font-size: 1.6em; font-weight: 800; color: white; margin: 3px 0; }
+        .location-tag { font-size: 0.8em; color: var(--bronze); font-family: monospace; }
+
+        .footer-grid { 
+            display: grid; 
+            grid-template-columns: 7fr 3fr; 
+            gap: 40px; 
+            flex: 1; 
+            min-height: 0; 
+        }
+
+        .dialogue-pane { display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+        
+        /* ▼▼ 지문 기울임꼴(이탤릭) 적용 및 색상 미세 조정 ▼▼ */
+        .narrative-text { 
+            color: #a8a096; /* 대사와 확실히 분리되도록 약간 더 어둡게 */
+            font-size: 0.95em; 
+            font-style: italic; /* 기울임꼴 적용 */
+            line-height: 1.6; 
+            overflow-y: auto; 
+            padding-right: 10px; 
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .status-summary-box { display: flex; gap: 15px; background: rgba(0,0,0,0.3); padding: 6px 12px; font-family: monospace; font-size: 0.75em; border-left: 2px solid var(--steampunk-teal); }
+        .status-label { color: var(--steampunk-teal); margin-right: 5px; }
+
+        .character-dialogue { flex: 1; border-left: 3px solid var(--bronze); padding-left: 20px; overflow-y: auto; color: #e6dfd5; line-height: 1.6; font-size: 1.05em; }
+        .character-name { color: var(--bronze); font-weight: bold; margin-bottom: 5px; display: block; font-size: 0.95em; }
+        
+        .interaction-pane { display: flex; flex-direction: column; gap: 15px; overflow-y: auto; padding-right: 5px; }
+        .function-btns { display: flex; gap: 10px; }
+        .func-btn { background: transparent; border: 1px solid var(--border-white); color: white; padding: 6px 20px; cursor: pointer; font-family: monospace; font-size: 0.85em; transition: all 0.3s; flex: 1;}
+        .func-btn:hover { background: white; color: black; }
+        .func-btn.play { border-color: var(--steampunk-teal); color: var(--steampunk-teal); }
+
+        #choices-list { display: flex; flex-direction: column; gap: 10px; }
+        .choice-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border-white); padding: 12px 15px; cursor: pointer; transition: all 0.3s; display: flex; flex-direction: column; gap: 8px; min-height: 60px; }
+        .choice-card.A { border-left: 4px solid var(--steampunk-teal); }
+        .choice-card.B { border-left: 4px solid var(--neon-red); }
+        .choice-card:hover { background: rgba(255,255,255,0.08); animation: glitch-anim 0.2s infinite; }
+        
+        .choice-title { font-size: 0.9em; font-weight: bold; word-break: keep-all;}
+        .stat-capsule { display: inline-block; padding: 2px 6px; background: rgba(0,0,0,0.5); border-radius: 2px; font-size: 0.7em; font-family: monospace; border: 1px solid rgba(255,255,255,0.1); color: #aaa; margin-right: 4px;}
+
+        @keyframes glitch-anim {
+            0% { transform: translate(0); }
+            20% { transform: translate(-1px, 1px); }
+            40% { transform: translate(-1px, -1px); }
+            100% { transform: translate(0); }
+        }
+
+        /* ▼▼ 스탯 팝업(Toast) 디자인 ▼▼ */
+        #toast-container { position: fixed; top: 80px; right: 40px; z-index: 3000; display: flex; flex-direction: column; gap: 10px;}
+        .toast { 
+            background: rgba(10, 8, 7, 0.9); 
+            border-left: 4px solid var(--steampunk-teal); 
+            padding: 12px 20px; 
+            color: white; 
+            font-family: monospace; 
+            font-size: 0.9em;
+            animation: slideIn 0.3s forwards; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.8); 
+            backdrop-filter: blur(5px);
+        }
+        .toast-sys { color: var(--steampunk-teal); font-weight: bold; margin-right: 8px; }
+        
+        @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(120%); opacity: 0; } }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: var(--text-dim); }
+
+        #visual-stage {
+            position: relative;
+            overflow: hidden;
+        }
+        #stage-video {
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%, -50%);
+    width:min(100%, calc((100vh - 330px) * 16 / 9));
+    aspect-ratio:16 / 9;
+    height:auto;
+    object-fit:contain;
+    display:none;
+    z-index:1;
+    pointer-events:none;
+}
+        .smoke-overlay {
+            z-index: 2 !important;
+            pointer-events: none;
+        }
+
+    </style>
+</head>
+<body>
+
+<div id="cover-page">
+    <div class="student-info">25730056 | 송시원</div>
+    <h1 class="main-title-large">STEAM-HANSEL<br>: 언로깅 생존자</h1>
+    
+    <div class="cover-variables">
+        <div class="var-preview bs">
+            <div class="var-dot"></div>
+            <span class="var-name">BIO-STEAM (생존/인간성)</span>
+        </div>
+        <div class="var-preview gc">
+            <div class="var-dot"></div>
+            <span class="var-name">GEAR-CORRUPTION (기계침식)</span>
+        </div>
+        <div class="var-preview ts">
+            <div class="var-dot"></div>
+            <span class="var-name">THERMAL-SIG (발각위험)</span>
+        </div>
+    </div>
+
+    <button class="connect-btn" onclick="startGame()">[ 시스템 접속 ]</button>
+</div>
+
+<header id="game-header">
+    <div class="header-title">[STEAM-HANSEL : 언로깅 생존자]</div>
+    <div class="status-gauges">
+        <div class="gauge-item">
+            <span class="gauge-label">BS</span>
+            <div class="gauge-bar"><div id="bs-fill" class="gauge-fill" style="width: 20%;"></div></div>
+            <span id="bs-val" class="stat-value">20%</span>
+        </div>
+        <div class="gauge-item">
+            <span class="gauge-label">GC</span>
+            <div class="gauge-bar"><div id="gc-fill" class="gauge-fill" style="width: 0%;"></div></div>
+            <span id="gc-val" class="stat-value">0%</span>
+        </div>
+        <div class="gauge-item">
+            <span class="gauge-label">TS</span>
+            <div class="gauge-bar"><div id="ts-fill" class="gauge-fill" style="width: 0%;"></div></div>
+            <span id="ts-val" class="stat-value">0%</span>
+        </div>
+    </div>
+</header>
+
+<main id="visual-stage">
+    <video id="stage-video" muted loop playsinline></video>
+    <div class="smoke-overlay"></div>
+</main>
+
+<footer id="game-footer">
+    <div class="info-section">
+        <span id="phase-id" class="phase-id">---</span>
+        <h2 id="scene-name" class="scene-main-title">---</h2>
+        <span id="location-tag" class="location-tag">---</span>
+    </div>
+
+    <div class="footer-grid">
+        <div class="dialogue-pane">
+            <div id="narrative-text" class="narrative-text"></div>
+            <div class="status-summary-box">
+                <div><span class="status-label">ID:</span> <span id="summary-id">---</span></div>
+                <div><span class="status-label">STATUS:</span> <span id="summary-status">---</span></div>
+                <div><span class="status-label">TIMER:</span> <span id="summary-timer">--:--</span></div>
+            </div>
+            <div class="character-dialogue">
+                <span id="speaker-name" class="character-name"></span>
+                <div id="dialogue-content"></div>
+            </div>
+        </div>
+
+        <div class="interaction-pane">
+            <div class="function-btns">
+                <button class="func-btn" onclick="goBack()">BACK</button>
+                <button class="func-btn play">PLAY</button>
+            </div>
+            <div id="choices-list"></div>
+        </div>
+    </div>
+</footer>
+
+<div id="toast-container"></div>
+
+<script>
+    let state = { statBS: 20, statGC: 0, statTS: 0 };
+    let history = [];
+    let typingTimer;
+
+    const scenes = {
+        "S1": {
+            id: "S1", phase: "PHASE 1 - 발산 및 빌드업", name: "언로깅 하층부", loc: "S1 - UNLOGGING DISTRICT",
+            narrative: "계모의 인공 망막 렌즈가 조리개를 좁히며 두 남매를 스캔한다. 인간적인 동정심을 모방하려던 듯 입꼬리가 미세하게 올라가려다 차갑게 식어 내린다.<br><br>선고가 끝나는 순간 시각 센서가 붉게 점멸하며 남매를 벼랑 끝으로 밀어낸다.",
+            status: { id: "SYSTEM", state: "WARNING", timer: "00:12" }, speaker: "계모(관리 시스템)",
+            text: "'경고. 가구 할당량 미달. 시스템 내 잉여 유기체 데이터 2건이 감지되었습니다. 도시의 효율성을 저해하는 불필요한 로그는 즉시 삭제되어야 합니다. 지금부터 하층부 폐기장으로의 영구 추방 프로토콜을 집행합니다.'",
+            choices: [
+                { type: 'A', text: "부모 밸브 강탈", effects: [{type: 'bs', val: '+30'}, {type: 'gc', val: '+20'}], action: () => { state.statBS += 30; state.statGC += 20; }, next: "S2" },
+                { type: 'B', text: "빈손으로 낙하", effects: [{type: 'neutral', val: '변동 없음'}], action: () => {}, next: "S2" }
+            ]
+        },
+        "S2": {
+            id: "S2", phase: "PHASE 1 - 생존의 시작", name: "독성 안개의 미궁", loc: "S2 - TOXIC MAZE",
+            narrative: "덜덜 떨리는 헨젤의 오른손이 무의식적으로 허리춤의 렌치를 향하지만 자꾸만 허공을 맴돈다. 핏기 가신 입술을 깨문다.<br><br>말을 뱉은 직후 스스로의 잔혹한 논리에 놀란 듯 흠칫 어깨를 떤다. 렌치를 쥔 손등에 시퍼런 핏대가 선명하다.",
+            status: { id: "UNKNOWN_NPC", state: "OFFLINE", timer: "02:45" }, speaker: "헨젤",
+            text: "'저 아이의 코어 팩을 뜯어내면... 그래, 당장 우리 압력 탱크를 가득 채울 수 있어. 어차피 이대로 두면 저 아이도 독성 스모그에 시스템이 정지될 거야. 우리가 살려면 어쩔 수 없잖아, 안 그래...?'",
+            choices: [
+                { type: 'A', text: "코어 강제 적출", effects: [{type: 'bs', val: '+15'}, {type: 'gc', val: '+15'}], action: () => { state.statBS += 15; state.statGC += 15; }, next: "S3" },
+                { type: 'B', text: "남은 동력 공유", effects: [{type: 'bs', val: '-10'}, {type: 'ts', val: '-10'}], action: () => { state.statBS -= 10; state.statTS -= 10; }, next: "S3" }
+            ]
+        },
+        "S3": {
+            id: "S3", phase: "PHASE 2 - 추격", name: "사냥", loc: "S3 - VENTILATION ZONE",
+            narrative: "벽에 기댄 그레텔은 해킹 단말기를 든 손을 사시나무 떨듯 떨고 있다. 눈물이 고인 눈으로 헨젤을 쳐다본다.<br><br>이기적인 결단에 혐오감을 느낀 듯 단말기를 쥔 손을 가슴팍으로 강하게 끌어안지만, 눈동자엔 생존의 독기가 번뜩인다.",
+            status: { id: "DRONES", state: "SEARCHING", timer: "00:30" }, speaker: "그레텔",
+            text: "'오빠, 사방이 포위됐어! 이대로면 둘 다 갈기갈기 찢겨나갈 거야! 미안하지만... 방금 전 지나친 그 아이의 위치를 미끼 핑으로 송출해서 사냥개들의 시선을 돌려야만 해! 제발, 우리부터 살고 봐야 하잖아!'",
+            choices: [
+                { type: 'A', text: "미끼 송출 및 도주", effects: [{type: 'ts', val: '0'}, {type: 'gc', val: '+20'}], action: () => { state.statTS = 0; state.statGC += 20; }, next: "S4" },
+                { type: 'B', text: "압력 탱크 과부하 돌파", effects: [{type: 'bs', val: '-20'}, {type: 'ts', val: '+15'}], action: () => { state.statBS -= 20; state.statTS += 15; }, next: "S4" }
+            ]
+        },
+        "S4": {
+            id: "S4", phase: "PHASE 2 - 거점 확보", name: "은신처 (거점)", loc: "S4 - ABANDONED STATION",
+            narrative: "한쪽 눈의 렌즈가 깨진 로봇이 삐걱거리며 고개를 돌린다. 부러진 집게팔을 남매 쪽으로 힘겹게 뻗는다.<br><br>말이 끝나기 무섭게 내부에서 스파크가 튀며 뻗었던 집게팔이 바닥으로 힘없이 가라앉는다.",
+            status: { id: "ROBOT", state: "IDLE", timer: "--:--" }, speaker: "정비 로봇",
+            text: "'지지직... 임시 오프라인 비콘 가동 중. 치명적인 손상 발생. 메인 기어 복구를 위한 수리용 동력이 절실히 필요하다. 부디 자비를 베풀어 다오, 시스템에 등록되지 않은 미등록 생존자들이여... 삐익-'",
+            choices: [
+                { type: 'A', text: "로봇 분해 / 모듈 획득", effects: [{type: 'gc', val: '+15'}], action: () => { state.statGC += 15; }, next: "S5" },
+                { type: 'B', text: "동력 지불 / 수리", effects: [{type: 'bs', val: '-15'}], action: () => { state.statBS -= 15; }, next: "S5" }
+            ]
+        },
+        "S5": {
+            id: "S5", phase: "PHASE 3 - 신체 변이", name: "톱니바퀴", loc: "S5 - TRASH MOUNTAIN",
+            narrative: "그레텔의 얼굴이 공포로 일그러진다. 서늘한 은빛 기계 의수를 든 두 손이 감전된 것처럼 떨린다.<br><br>헨젤의 멀쩡한 왼손을 뺨에 비비며 오열하다, 호흡이 옅어지자 절망 어린 눈으로 기계 의수를 바라본다.",
+            status: { id: "HENSEL", state: "CRITICAL", timer: "00:05" }, speaker: "그레텔",
+            text: "'안 돼, 제발! 이 차가운 고철 덩어리를 메인 신경계에 직접 꽂아 넣으면 오빠의 남은 인간성마저 전부 기계에 먹혀버릴 거라고! 내가 어떻게든 다른 부품을 찾아올 테니까, 제발 이 끔찍한 짓은 하지 마!'",
+            choices: [
+                { type: 'A', text: "기계 의수 강제 이식", effects: [{type: 'gc', val: '+25'}], action: () => { state.statGC += 25; }, next: "S6" },
+                { type: 'B', text: "유기체 집중 치유", effects: [{type: 'bs', val: '-30'}], action: () => { state.statBS -= 30; }, next: "S6" }
+            ]
+        },
+        "S6": {
+            id: "S6", phase: "PHASE 3 - 심연으로", name: "도하", loc: "S6 - OIL SEWER",
+            narrative: "백조-7의 카메라가 기계적인 소음을 내며 남매의 스팀 보유량을 스캔한다. 어떠한 융통성도 없다.<br><br>단호하게 차단기가 내려가며 육중한 금속음이 울린다. 내부에서 전기 충격기의 스파크가 낮게 웅웅거린다.",
+            status: { id: "SWAN-7", state: "WAITING", timer: "01:00" }, speaker: "백조-7",
+            text: "'접근 거부. 현재 운항 동력이 치명적으로 부족합니다. 도하를 위한 최소 필요 동력 스팀(BS) 15%를 즉각 지불하십시오. 조건을 충족하지 못한 미등록 생존자의 무단 탑승은 방어 기제에 의해 엄격히 통제됩니다.'",
+            choices: [
+                { type: 'A', text: "드론 강제 해킹 / 폭주", effects: [{type: 'ts', val: 'MAX'}], action: () => { state.statTS = 100; }, next: "S7" },
+                { type: 'B', text: "정당한 동력 지불", effects: [{type: 'bs', val: '-15'}, {type: 'ts', val: '-20'}], action: () => { state.statBS -= 15; state.statTS -= 20; }, next: "S8" }
+            ]
+        },
+        "S7": {
+            id: "S7", phase: "PHASE 4 - 함정", name: "유혹 (함정)", loc: "S7 - NEON TERMINAL",
+            narrative: "기계 의수를 단 헨젤의 어깨가 들썩이고, 혀로 입술을 축인다. 의수의 신경 다발들이 에너지를 탐하며 꿈틀거린다.<br><br>그레텔이 옷자락을 당기지만, 헨젤은 거칠게 뿌리친 채 홀린 듯 허공에 손을 뻗어 에너지를 쥘 듯 구부적거린다.",
+            status: { id: "TERMINAL", state: "TRAP", timer: "00:10" }, speaker: "헨젤",
+            text: "'아아... 저 찬란한 에너지들 좀 봐. 내 안의 기계들이 미친 듯이 굶주려 하고 있어. 조금만... 아주 조금만 밸브를 열어 마셔도, 우리 탱크가 터질 듯이 가득 차오를 텐데. 이 달콤한 빛을 어떻게 거부할 수 있겠어?'",
+            choices: [
+                { type: 'A', text: "에너지 뱅크 포식", effects: [{type: 'bs', val: 'MAX'}, {type: 'ts', val: 'MAX'}], action: () => { state.statBS = 100; state.statTS = 100; }, next: "S9" },
+                { type: 'B', text: "스텔스 잠입 유지", effects: [{type: 'ts', val: '20'}], action: () => { state.statTS = 20; }, next: "S8" }
+            ]
+        },
+        "S8": {
+            id: "S8", phase: "FINAL PHASE - 분기", name: "심판의 방", loc: "S8 - CORE FURNACE",
+            narrative: "붉게 점멸하는 코어 앞, 벽면 스피커에서 나긋나긋한 시스템의 음성이 공간을 짓누르며 쏟아져 내린다.<br><br>밸브를 덮은 쉴드가 스르륵 내려간다. 두 사람의 손이 동시에 멈칫하며, 서로의 눈을 깊게 응시한다.",
+            status: { id: "CORE", state: "READY", timer: "00:00" }, speaker: "시스템",
+            text: "'[루트 권한이 성공적으로 개방되었습니다. 환영합니다. 모든 통제권을 인계받을 새로운 소각로 관리자 코드를 입력하시겠습니까? 당신의 선택이 이 거대한 톱니바퀴의 새로운 질서가 될 것입니다.]'",
+            choices: [
+                { type: 'A', text: "시스템 권한 탈취 (동화)", effects: [{type: 'gc', val: '동화'}], action: () => {}, next: "ENDING10" },
+                { type: 'B', text: "코어 자폭 및 탈출 (해방)", effects: [{type: 'bs', val: '해방'}], action: () => {}, next: "ENDING11" }
+            ]
+        },
+        "S9": {
+            id: "S9", phase: "SYSTEM ERROR", name: "폐기장 (Loop)", loc: "S9 - SCRAPYARD DEATH",
+            narrative: "쏘아져 내려온 거미 형태의 기계팔들이 남매의 사지를 포박한다. 차가운 렌즈가 절망적인 얼굴을 코앞에서 비춘다.<br><br>뼈가 부러지는 파공음과 함께 시야가 점멸하다 브라운관 TV가 꺼지듯 노이즈와 함께 암흑으로 빨려 든다.",
+            status: { id: "SECURITY", state: "KILL", timer: "ERROR" }, speaker: "시스템",
+            text: "'치명적 논리 오류 및 무단 접근 발생. 보안 프로토콜 가동. 대상 유기체의 즉각적인 파괴를 승인합니다. 손상된 데이터는 가장 최근에 기록된 세이브 비콘으로 강제 복원 및 재부팅됩니다.'",
+            choices: [
+                { type: 'A', text: "[강제 진행] 데이터 롤백", effects: [{type: 'bs', val: '20'}, {type: 'ts', val: '0'}], action: () => { state.statBS = 20; state.statTS = 0; }, next: "S4" }
+            ]
+        },
+        "ENDING10": {
+            id: "ENDING10", phase: "END OF LOG", name: "엔딩 A: 시스템 동화", loc: "ASSIMILATION",
+            narrative: "차가운 크롬과 검은 케이블로 대체된 육체. 안면부의 근육이 딱딱하게 굳어버리며 눈동자가 푸른 LED로 켜진다.<br><br>목소리는 과거 '계모'와 완벽히 똑같다. 코어의 붉은 불빛 속으로 부품이 되어 녹아든다.",
+            status: { id: "HENSEL_SYS", state: "ONLINE", timer: "∞" }, speaker: "새 통제관",
+            text: "'...시스템 안정화 완료. 구역 내 잉여 데이터 및 비승인 유기체 스캔 중. 도출된 결론: 불필요. 도시의 완벽한 순환을 위해, 지금 이 순간부터 모든 불량 로그의 영구 삭제를 집행한다.'",
+            choices: [{ type: 'A', text: "리부트 (다시 시작)", effects: [], action: () => location.reload(), next: "S1" }]
+        },
+        "ENDING11": {
+            id: "ENDING11", phase: "END OF LOG", name: "엔딩 B: 진정한 해방", loc: "SURFACE",
+            narrative: "그을음 투성이가 된 남매의 뺨 위로 맑은 바람이 스친다. 기계음 하나 없는 정적 속에서 그레텔이 헨젤의 손을 꽉 쥔다.<br><br>뜨거운 눈물이 기름때를 씻어낸다. 부서진 기계 의수 틈새로 별빛이 반짝이며, 서로를 마주 보며 미소 짓는다.",
+            status: { id: "FREE_SOUL", state: "FREE", timer: "STOP" }, speaker: "헨젤&그레텔",
+            text: "'하늘이... 가짜 철창이 아니라 진짜 하늘이 보여. 오빠, 느껴져? 이 맑은 공기... 마침내 그 끔찍한 기계들과의 접속이 완전히 끊어졌어. 우린 살아남은 거야. 이제 진짜 우리만의 자유야...'",
+            choices: [{ type: 'A', text: "새로운 여정 (다시 시작)", effects: [], action: () => location.reload(), next: "S1" }]
+        }
+    };
+
+    function startGame() {
+        const cover = document.getElementById('cover-page');
+        cover.style.opacity = '0';
+        setTimeout(() => {
+            cover.style.visibility = 'hidden';
+            document.getElementById('game-header').style.display = 'flex';
+            document.getElementById('visual-stage').style.display = 'flex';
+            document.getElementById('game-footer').style.display = 'flex';
+            renderScene("S1");
+        }, 1000);
+    }
+
+    function updateGauges() {
+        state.statBS = Math.max(0, Math.min(100, state.statBS));
+        state.statGC = Math.max(0, Math.min(100, state.statGC));
+        state.statTS = Math.max(0, Math.min(100, state.statTS));
+
+        document.getElementById('bs-fill').style.width = state.statBS + "%";
+        document.getElementById('gc-fill').style.width = state.statGC + "%";
+        document.getElementById('ts-fill').style.width = state.statTS + "%";
+        
+        document.getElementById('bs-val').innerText = state.statBS + "%";
+        document.getElementById('gc-val').innerText = state.statGC + "%";
+        document.getElementById('ts-val').innerText = state.statTS + "%";
+    }
+
+    function typeWriter(element, text) {
+        clearInterval(typingTimer);
+        element.innerHTML = "";
+        let i = 0;
+        typingTimer = setInterval(() => {
+            if (i < text.length) {
+                element.innerHTML += text.charAt(i);
+                i++;
+                element.parentElement.scrollTop = element.parentElement.scrollHeight;
+            } else { clearInterval(typingTimer); }
+        }, 25);
+    }
+
+    // ▼▼ 토스트(팝업) 알림 표시 함수 추가 ▼▼
+    function showToast(message) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerHTML = `<span class="toast-sys">[SYS]</span> ${message}`;
+        container.appendChild(toast);
+        
+        // 2초 후 사라지는 애니메이션 적용
+        setTimeout(() => {
+            toast.style.animation = 'slideOut 0.3s forwards';
+            setTimeout(() => toast.remove(), 300);
+        }, 2500);
+    }
+
+    function renderScene(sceneId) {
+        const scene = scenes[sceneId];
+        if(!scene) return;
+
+        updateGauges();
+        
+        const visualStage = document.getElementById('visual-stage');
+        const stageVideo = document.getElementById('stage-video');
+
+        const sceneVideos = {
+            "S1":"video/S1.mp4",
+            "S2":"video/S2.mp4",
+            "S3":"video/S3.mp4",
+            "S4":"video/S4.mp4",
+            "S5":"video/S5.mp4",
+            "S6":"video/S6.mp4",
+            "S7":"video/S7.mp4",
+            "S8":"video/S8.mp4",
+            "S9":"video/S9.mp4",
+            "ENDING10":"video/END_A.mp4",
+            "ENDING11":"video/END_B.mp4"
+        };
+
+        if (sceneVideos[sceneId]) {
+            visualStage.style.backgroundImage = "none";
+            stageVideo.style.display = "block";
+
+            if (stageVideo.src !== sceneVideos[sceneId]) {
+                stageVideo.src = sceneVideos[sceneId];
+                stageVideo.load();
+            }
+
+            const playPromise = stageVideo.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(() => {
+                    const forcePlay = () => {
+                        stageVideo.play();
+                        document.removeEventListener('click', forcePlay);
+                    };
+                    document.addEventListener('click', forcePlay);
+                });
+            }
+        } else {
+            stageVideo.pause();
+            stageVideo.style.display = "none";
+            stageVideo.src = "";
+            visualStage.style.backgroundImage = "none";
+        }
+        
+        document.getElementById('phase-id').innerText = scene.phase;
+        document.getElementById('scene-name').innerText = scene.name;
+        document.getElementById('location-tag').innerText = scene.loc;
+        document.getElementById('narrative-text').innerHTML = scene.narrative;
+        document.getElementById('summary-id').innerText = scene.status.id;
+        document.getElementById('summary-status').innerText = scene.status.state;
+        document.getElementById('summary-timer').innerText = scene.status.timer;
+        document.getElementById('speaker-name').innerText = scene.speaker;
+        typeWriter(document.getElementById('dialogue-content'), scene.text);
+
+        const choicesList = document.getElementById('choices-list');
+        choicesList.innerHTML = "";
+        scene.choices.forEach(c => {
+            const card = document.createElement('div');
+            card.className = `choice-card ${c.type}`;
+            let badges = c.effects.map(e => `<span class="stat-capsule">${e.type.toUpperCase()} ${e.val}</span>`).join(' ');
+            card.innerHTML = `<span class="choice-title">[${c.type}] ${c.text}</span><div>${badges}</div>`;
+            
+            card.onclick = () => {
+                history.push({ sceneId, state: { ...state } });
+                c.action(); // 변수 업데이트
+
+                // ▼▼ 선택에 따른 변동 수치를 토스트 알림으로 출력 ▼▼
+                let effectMessages = c.effects
+                    .filter(e => e.type !== 'neutral' && e.type !== 'none') // 변동 없음은 제외
+                    .map(e => `${e.type.toUpperCase()} ${e.val}`)
+                    .join(' / ');
+
+                if (effectMessages) {
+                    showToast(`스탯 업데이트: ${effectMessages}`);
+                }
+
+                renderScene(c.next);
+            };
+            choicesList.appendChild(card);
+        });
+    }
+
+    function goBack() {
+        if(history.length > 0) {
+            const prev = history.pop();
+            state = prev.state;
+            renderScene(prev.sceneId);
+        }
+    }
+</script>
+
+</body>
+</html>
